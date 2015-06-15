@@ -83,7 +83,6 @@ B5500LinePrinter.prototype.clear = function clear() {
 B5500LinePrinter.prototype.setPrinterReady = function setPrinterReady(ready) {
     /* Controls the ready-state of the line printer */
 
-    this.formFeedCount = 0;
     if (ready && !this.ready) {
         this.statusChange(1);
         B5500Util.addClass(this.$$("LPStartBtn"), "greenLit")

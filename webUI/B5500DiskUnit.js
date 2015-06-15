@@ -372,8 +372,10 @@ B5500DiskUnit.prototype.write = function write(finish, buffer, length, mode, con
 
     eu = this.config[euName];
     if (!eu) {                          // EU does not exist
+        console.log(euName + " does not exist");
         this.stdFinish(0x20, 0);        // set D27F for EU not ready
     } else if (segAddr < 0) {
+        console.log(euName + " invalid starting addr");
         this.stdFinish(0x20, 0);        // set D27F for invalid starting seg address
     } else {
         if (endAddr >= eu.size) {       // if read is past end of disk
@@ -391,6 +393,14 @@ B5500DiskUnit.prototype.write = function write(finish, buffer, length, mode, con
         } else {
             // Do the write
             txn = this.db.transaction(euName, "readwrite")
+            txn.onerror = function writeTxnOnError(ev) {
+                console.log(euName + " write txn onerror", ev);
+                that.stdFinish(0x20, 0);
+            };
+            txn.onabort = function writeTxnOnAbort(ev) {
+                console.log(euName + " write txn onabort", ev);
+                that.stdFinish(0x20, 0);
+            };
             txn.oncomplete = function writeComplete(ev) {
                 that.timer = setCallback(that.mnemonic, that, finishTime - performance.now(),
                     function writeTimeout() {

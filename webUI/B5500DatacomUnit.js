@@ -511,7 +511,7 @@ B5500DatacomUnit.prototype.termConnectBtnClick = function termConnectBtnClick(ev
 };
 
 /**************************************/
-B5500SPOUnit.prototype.copyPaper = function copyPaper(ev) {
+B5500DatacomUnit.prototype.copyPaper = function copyPaper(ev) {
     /* Copies the text contents of the "paper" area of the SPO, opens a new
     temporary window, and pastes that text into the window so it can be copied
     or saved by the user */
@@ -572,7 +572,7 @@ B5500DatacomUnit.prototype.datacomOnload = function datacomOnload() {
     this.$$("TermOut").addEventListener("keypress",
             B5500CentralControl.bindMethod(this, B5500DatacomUnit.prototype.keyPress), false);
     this.paper.addEventListener("dblclick",
-            B5500CentralControl.bindMethod(this, B5500SPOUnit.prototype.copyPaper), false);
+            B5500CentralControl.bindMethod(this, B5500DatacomUnit.prototype.copyPaper), false);
     this.$$("TermConnectBtn").addEventListener("click",
             B5500CentralControl.bindMethod(this, B5500DatacomUnit.prototype.termConnectBtnClick), false);
 
