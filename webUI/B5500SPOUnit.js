@@ -19,6 +19,8 @@
 /**************************************/
 function B5500SPOUnit(mnemonic, unitIndex, designate, statusChange, signal, options) {
     /* Constructor for the SPOUnit object */
+    var h = Math.max(screen.availHeight*0.33, 420);
+    var w = 688;
 
     this.maxScrollLines = 5000;         // Maximum amount of printer scrollback
     this.charPeriod = 100;              // Printer speed, milliseconds per character
@@ -36,17 +38,13 @@ function B5500SPOUnit(mnemonic, unitIndex, designate, statusChange, signal, opti
 
     this.clear();
 
-    this.window = window.open("", mnemonic);
-    if (this.window) {
-        this.shutDown();                // destroy any previously-existing window
-        this.window = null;
-    }
     this.doc = null;
     this.paper = null;
     this.inputBox = null;
     this.endOfPaper = null;
     this.window = window.open("../webUI/B5500SPOUnit.html", mnemonic,
-            "location=no,scrollbars=no,resizable,width=688,height=508");
+            "location=no,scrollbars=no,resizable,width=" + w + ",height=" + h +
+            ",left=" + (screen.availWidth - w) + ",top=" + (screen.availHeight - h));
     this.window.addEventListener("load", B5500CentralControl.bindMethod(this,
             B5500SPOUnit.prototype.spoOnload), false);
 }
@@ -269,7 +267,7 @@ B5500SPOUnit.prototype.requestInput = function requestInput() {
         if (!this.spoInputRequested) {
             this.spoInputRequested = true;
             B5500Util.addClass(this.$$("SPOInputRequestBtn"), "yellowLit");
-            this.signal();
+            this.signal(0);             // Cause the Input Request interrupt
         }
         break;
     case this.spoInput:
@@ -513,18 +511,20 @@ B5500SPOUnit.prototype.spoOnload = function spoOnload() {
     this.$$("SPOAlgolGlyphsBtn").addEventListener("click",
             B5500CentralControl.bindMethod(this, B5500SPOUnit.prototype.SPOAlgolGlyphsBtn_onclick), false);
 
+    this.window.focus();
     this.printText("retro-B5500 Emulator Version " + B5500CentralControl.version,
             B5500CentralControl.bindMethod(this, function initFinish() {
-        this.window.focus();
-        window.open("", "B5500Console").focus();
         this.setRemote();
         this.appendEmptyLine("\xA0");
         this.endOfPaper.scrollIntoView();
+        this.signal(-1);                // re-focus the Console window
     }));
 
-    this.window.moveTo(screen.availWidth-this.window.outerWidth,
-                       screen.availHeight-this.window.outerHeight);
-    this.window.focus();
+    // Kludge for Chrome window.outerWidth/Height timing bug
+    setCallback(null, this, 100, function chromeBug() {
+        this.window.moveTo(screen.availWidth-this.window.outerWidth,
+                           screen.availHeight-this.window.outerHeight);
+    });
 };
 
 /**************************************/

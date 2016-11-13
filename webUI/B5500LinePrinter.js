@@ -18,7 +18,7 @@
 /**************************************/
 function B5500LinePrinter(mnemonic, unitIndex, designate, statusChange, signal, options) {
     /* Constructor for the LinePrinter object */
-    var h = screen.availHeight*0.60;
+    var h = Math.max(screen.availHeight*0.33, 420);
     var w = 900;
 
     this.mnemonic = mnemonic;           // Unit mnemonic
@@ -35,11 +35,6 @@ function B5500LinePrinter(mnemonic, unitIndex, designate, statusChange, signal, 
 
     this.clear();
 
-    this.window = window.open("", mnemonic);
-    if (this.window) {
-        this.shutDown();                // destroy the previously-existing window
-        this.window = null;
-    }
     this.doc = null;
     this.barGroup = null;               // current greenbar line group
     this.paperDoc = null;               // the content document for the paper frame
@@ -54,6 +49,7 @@ function B5500LinePrinter(mnemonic, unitIndex, designate, statusChange, signal, 
 }
 
 B5500LinePrinter.prototype.linesPerMinute = 1040;       // B329 line printer
+B5500LinePrinter.prototype.msPerLine = 60000/B5500LinePrinter.prototype.linesPerMinute;
 B5500LinePrinter.prototype.maxPaperLines = 150000;      // maximum printer scrollback (about a box of paper)
 B5500LinePrinter.prototype.rtrimRex = /\s+$/;           // regular expression for right-trimming lines
 B5500LinePrinter.prototype.theColorGreen = "#CFC";      // for greenbar shading
@@ -144,21 +140,23 @@ B5500LinePrinter.prototype.appendLine = function appendLine(text) {
     greenbar group, this.barGroup. This handles top-of-form and greenbar
     highlighting */
     var feed = "\n";
+    var skip = "";
 
     if (this.groupLinesLeft <= 0) {
         // Start the green half of a greenbar group
-        this.barGroup = this.doc.createElement("pre");
+        this.barGroup = this.doc.createElement("div");
         this.paper.appendChild(this.barGroup);
         this.groupLinesLeft = this.lpi;
         if (!this.atTopOfForm) {
             this.barGroup.className = "paper greenBar";
         } else {
+            skip = "\f";               // prepend a form-feed to the line
             this.atTopOfForm = false;
             this.barGroup.className = "paper greenBar topOfForm";
         }
     } else if (this.groupLinesLeft*2 == this.lpi) {
         // Start the white half of a greenbar group
-        this.barGroup = this.doc.createElement("pre");
+        this.barGroup = this.doc.createElement("div");
         this.paper.appendChild(this.barGroup);
         this.barGroup.className = "paper whiteBar";
     } else if (this.groupLinesLeft == 1) {
@@ -167,7 +165,7 @@ B5500LinePrinter.prototype.appendLine = function appendLine(text) {
         feed = "";                      // ditto
     }
 
-    this.barGroup.appendChild(this.doc.createTextNode(text + feed));
+    this.barGroup.appendChild(this.doc.createTextNode(skip + text + feed));
     --this.groupLinesLeft;
 };
 
@@ -231,7 +229,7 @@ B5500LinePrinter.prototype.setGreenbar = function setGreenbar(useGreen) {
             // Next, search through the rules for the one that controls greenbar shading.
             for (x=rules.length-1; x>=0; --x) {
                 rule = rules[x];
-                if (rule.selectorText.toLowerCase() == "pre.greenbar") {
+                if (rule.selectorText.toLowerCase() == "div.greenbar") {
                     // Found it: now flip the background color.
                     rule.style.backgroundColor = (useGreen ? this.theColorGreen : "white");
                 }
@@ -372,6 +370,8 @@ B5500LinePrinter.prototype.printerOnload = function printerOnload() {
             B5500CentralControl.bindMethod(this, B5500LinePrinter.prototype.LPStopBtn_onclick), false);
     this.$$("LPStartBtn").addEventListener("click",
             B5500CentralControl.bindMethod(this, B5500LinePrinter.prototype.LPStartBtn_onclick), false);
+
+    this.window.moveTo(0, screen.availHeight - this.window.outerHeight);
 };
 
 /**************************************/
@@ -406,7 +406,7 @@ B5500LinePrinter.prototype.write = function write(finish, buffer, length, mode, 
     }
 
     this.timer = setCallback(this.mnemonic, this,
-        60000/this.linesPerMinute + this.initiateStamp - performance.now(),
+        this.msPerLine + this.initiateStamp - performance.now(),
         this.signal);
     finish(this.errorMask, 0);
     this.endOfPaper.scrollIntoView();
